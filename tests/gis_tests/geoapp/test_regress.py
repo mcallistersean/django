@@ -5,6 +5,8 @@ from datetime import datetime
 
 from django.contrib.gis.db.models import Extent
 from django.contrib.gis.shortcuts import render_to_kmz
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
 from django.db.models import Count, Min
 from django.test import TestCase, skipUnlessDBFeature
 
@@ -87,3 +89,12 @@ class GeoRegressionTests(TestCase):
         # verify values
         self.assertIs(val1, True)
         self.assertIs(val2, False)
+
+    def test_filter_on_distance_annotation(self):
+        "Regression for #27014"
+        pueblo = City.objects.get(name='Pueblo')
+        qs = City.objects.all()
+        qs = qs.annotate(distance_from_pueblo=Distance('point', pueblo.point))
+        qs = qs.filter(distance_from_pueblo__lte=0)
+        qs = list(qs)
+        self.assertListEqual(qs, [pueblo])
